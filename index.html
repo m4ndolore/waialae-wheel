@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Waialae Wheel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Tab: Setup -->
+  <div class="tab-view" id="tab-setup">
+    <header>
+      <h1>Waialae Wheel</h1>
+      <p class="subtitle">Bet Tracker</p>
+    </header>
+    <div class="tab-content">
+      <div class="saved-groups" id="savedGroups"></div>
+
+      <div class="card">
+        <div class="card-label">Format</div>
+        <div class="pill-toggle" id="gameTypePills">
+          <button class="pill active" data-value="4">4-Player</button>
+          <button class="pill" data-value="5">5-Player</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label-row">
+          <span class="card-label">Players &amp; Handicap</span>
+          <button class="hcp-lock-btn" id="hcpLockBtn" title="Lock/unlock handicaps"></button>
+        </div>
+        <div id="playerCards"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Base Bet</div>
+        <div class="bet-stepper">
+          <button class="stepper-btn" id="betMinus">-</button>
+          <span class="stepper-value" id="betValue">$10</span>
+          <button class="stepper-btn" id="betPlus">+</button>
+        </div>
+        <div class="bet-presets" id="betPresets">
+          <button class="preset" data-value="5">$5</button>
+          <button class="preset" data-value="10">$10</button>
+          <button class="preset" data-value="20">$20</button>
+          <button class="preset" data-value="25">$25</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Press Limit</div>
+        <div class="press-limit-row">
+          <div class="press-limit-options" id="pressLimitOptions">
+            <button class="preset" data-value="0">No limit</button>
+            <button class="preset" data-value="2">2</button>
+            <button class="preset" data-value="3">3</button>
+            <button class="preset" data-value="4">4</button>
+            <button class="preset" data-value="5">5</button>
+          </div>
+          <div class="press-limit-hint" id="pressLimitHint"></div>
+        </div>
+      </div>
+
+      <button class="btn-start" id="startRound">Start Round</button>
+
+      <div class="backup-row">
+        <button class="btn-backup" id="exportData">Export Backup</button>
+        <label class="btn-backup btn-import-label">
+          Import Backup
+          <input type="file" accept=".json" id="importData" hidden>
+        </label>
+      </div>
+
+      <button class="btn-reset" id="resetRound">Reset Round</button>
+    </div>
+  </div>
+
+  <!-- Tab: Scorecard -->
+  <div class="tab-view hidden" id="tab-scorecard">
+    <div class="hole-header">
+      <div class="hole-progress" id="holeProgress"></div>
+      <div class="hole-display">
+        <button class="hole-arrow" id="holePrev">&lsaquo;</button>
+        <div class="hole-center">
+          <div class="hole-number">Hole <span id="holeNum">1</span></div>
+          <div class="hole-meta" id="holeMeta">Hdcp 7 &middot; Par 4</div>
+        </div>
+        <button class="hole-arrow" id="holeNext">&rsaquo;</button>
+      </div>
+    </div>
+    <div class="tab-content score-content">
+      <div id="scoreRows"></div>
+      <div class="results-banner hidden" id="resultsBanner"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Matches -->
+  <div class="tab-view hidden" id="tab-matches">
+    <header>
+      <h1>Matches</h1>
+    </header>
+    <div class="tab-content">
+      <div class="at-risk-banner hidden" id="atRiskBanner"></div>
+      <div class="grand-total-card" id="grandTotal"></div>
+      <div id="matchCards"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Detail -->
+  <div class="tab-view hidden" id="tab-detail">
+    <header>
+      <h1>Detail</h1>
+    </header>
+    <div class="tab-content">
+      <div class="pill-toggle match-pills" id="matchPills"></div>
+      <div class="pill-toggle game-pills" id="gamePills">
+        <button class="pill active" data-value="lowNet">Low Net</button>
+        <button class="pill" data-value="aggregate">Aggregate</button>
+      </div>
+      <div id="detailLines"></div>
+    </div>
+  </div>
+
+  <!-- Tab: Settlement -->
+  <div class="tab-view hidden" id="tab-settlement">
+    <header>
+      <h1>Settlement</h1>
+    </header>
+    <div class="tab-content">
+      <div class="grand-total-card" id="settlementGrandTotal"></div>
+      <div id="settlementMatches"></div>
+      <button class="btn-share" id="shareBtn">Copy Summary</button>
+    </div>
+  </div>
+
+  <!-- Numpad Overlay -->
+  <div class="numpad-backdrop numpad-hidden" id="numpadBackdrop"></div>
+  <div class="numpad-overlay numpad-hidden" id="numpadOverlay">
+    <div class="numpad-header">
+      <span class="numpad-player" id="numpadPlayer"></span>
+      <span class="numpad-value" id="numpadValue"></span>
+    </div>
+    <div class="numpad-grid">
+      <button class="numpad-key" data-key="1">1</button>
+      <button class="numpad-key" data-key="2">2</button>
+      <button class="numpad-key" data-key="3">3</button>
+      <button class="numpad-key" data-key="4">4</button>
+      <button class="numpad-key" data-key="5">5</button>
+      <button class="numpad-key" data-key="6">6</button>
+      <button class="numpad-key" data-key="7">7</button>
+      <button class="numpad-key" data-key="8">8</button>
+      <button class="numpad-key" data-key="9">9</button>
+      <button class="numpad-key numpad-clear" data-key="clear">C</button>
+      <button class="numpad-key" data-key="0">0</button>
+      <button class="numpad-key numpad-next" data-key="next">&rarr;</button>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <button class="feedback-fab" id="feedbackFab" title="Send feedback">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+  <div class="feedback-backdrop feedback-hidden" id="feedbackBackdrop"></div>
+  <div class="feedback-panel feedback-hidden" id="feedbackPanel">
+    <div class="feedback-title">Send Feedback</div>
+    <div class="pill-toggle feedback-type-pills" id="feedbackTypePills">
+      <button class="pill active" data-value="feature">Feature</button>
+      <button class="pill" data-value="bug">Bug</button>
+      <button class="pill" data-value="comment">Comment</button>
+    </div>
+    <textarea class="feedback-textarea" id="feedbackMessage" placeholder="What's on your mind?" rows="4"></textarea>
+    <button class="feedback-submit" id="feedbackSubmit">Send</button>
+    <div class="feedback-status" id="feedbackStatus"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-tab active" data-tab="setup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Setup</span>
+    </button>
+    <button class="nav-tab" data-tab="scorecard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      <span>Score</span>
+    </button>
+    <button class="nav-tab" data-tab="matches">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Matches</span>
+    </button>
+    <button class="nav-tab" data-tab="detail">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span>Detail</span>
+    </button>
+    <button class="nav-tab" data-tab="settlement">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Settle</span>
+    </button>
+  </nav>
+
+<script src="app.js"></script>
+</body>
+</html>
