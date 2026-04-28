@@ -1,8 +1,8 @@
-// ── Waialae Wheel Bet Tracker v2 ──────────────────────────────────
+// ── Waialae Game Bet Tracker v2 ───────────────────────────────────
 // All game logic preserved from original. UI rebuilt for mobile-first tabs.
 
 const HOLES = [...Array(18)].map((_, i) => i + 1);
-const WAIALAE_HCP = [7,17,13,1,9,11,3,15,5,6,16,12,18,2,10,14,4,8];
+const WAIALAE_HCP = [13,11,5,17,1,9,3,7,15,14,10,6,12,8,2,18,4,16];
 // Waialae CC par: front 36, back 34, total 70
 const WAIALAE_PAR = [4,4,4,4,4,4,3,4,5,4,3,4,3,4,4,4,4,4];
 
@@ -35,6 +35,15 @@ if (!state.activeTab) state.activeTab = 'setup';
 if (!state.savedGroups) state.savedGroups = [];
 if (state.hcpLocked === undefined) state.hcpLocked = false;
 if (state.maxPresses === undefined) state.maxPresses = 0;
+
+function syncViewportHeight() {
+  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+}
+
+syncViewportHeight();
+window.addEventListener('resize', syncViewportHeight);
+window.addEventListener('orientationchange', syncViewportHeight);
+window.addEventListener('pageshow', syncViewportHeight);
 
 // ── Persistence: localStorage + IndexedDB backup ─────────────────
 
@@ -118,6 +127,28 @@ function importState(file) {
 }
 function activePlayers() { return state.players.slice(0, +state.gameType); }
 function pname(i) { return state.players[i]?.name || `Player ${i+1}`; }
+
+// ── Golfer Database (localStorage) ───────────────────────────────
+
+const GOLFER_DB_KEY = 'waialaeGolferDB';
+
+function loadGolferDB() {
+  try { return JSON.parse(localStorage.getItem(GOLFER_DB_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function saveGolfer(name, hcp) {
+  if (!name || name.startsWith('Player ')) return;
+  const db = loadGolferDB();
+  db[name.toLowerCase()] = { name, hcp };
+  localStorage.setItem(GOLFER_DB_KEY, JSON.stringify(db));
+}
+
+function lookupGolfer(name) {
+  if (!name) return null;
+  const db = loadGolferDB();
+  return db[name.toLowerCase()] || null;
+}
 
 // ── Game Logic (unchanged) ────────────────────────────────────────
 
@@ -272,6 +303,8 @@ function renderSetup() {
   renderPlayerCards();
   renderBetStepper();
   renderPressLimit();
+  renderGoLive();
+  renderPastRounds();
 }
 
 function renderSavedGroups() {
@@ -350,28 +383,49 @@ function renderPlayerCards() {
       <div class="player-card">
         <div class="player-crown ${isWheel ? 'active' : ''}" data-player="${i}" title="Wheel player">${isWheel ? '&#9813;' : '&#9813;'}</div>
         <input class="player-name" type="text" value="${state.players[i].name}" data-player="${i}" autocomplete="off" autocorrect="off">
-        <div class="hcp-stepper ${state.hcpLocked ? 'disabled' : ''}">
-          <button class="hcp-btn" data-player="${i}" data-dir="-1">&minus;</button>
-          <span class="hcp-val">${state.players[i].hcp}</span>
-          <button class="hcp-btn" data-player="${i}" data-dir="1">+</button>
+        <div class="hcp-input-wrap ${state.hcpLocked ? 'disabled' : ''}">
+          <input class="hcp-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="54" value="${state.players[i].hcp}" data-player="${i}" ${state.hcpLocked ? 'disabled' : ''}>
         </div>
       </div>`;
   }
   container.innerHTML = html;
 
   container.querySelectorAll('.player-name').forEach(input => {
+    let debounceTimer;
     input.addEventListener('input', (e) => {
-      state.players[+e.target.dataset.player].name = e.target.value;
+      const pi = +e.target.dataset.player;
+      state.players[pi].name = e.target.value;
       save();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const golfer = lookupGolfer(e.target.value);
+        if (golfer && !state.hcpLocked) {
+          state.players[pi].hcp = golfer.hcp;
+          save();
+          const hcpInput = container.querySelector(`.hcp-input[data-player="${pi}"]`);
+          if (hcpInput) hcpInput.value = golfer.hcp;
+        }
+      }, 400);
     });
   });
 
-  container.querySelectorAll('.hcp-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pi = +btn.dataset.player;
-      const dir = +btn.dataset.dir;
-      state.players[pi].hcp = Math.max(0, state.players[pi].hcp + dir);
-      save(); renderPlayerCards();
+  container.querySelectorAll('.hcp-input').forEach(input => {
+    input.addEventListener('focus', (e) => e.target.select());
+    input.addEventListener('change', (e) => {
+      const pi = +e.target.dataset.player;
+      const val = Math.max(0, Math.min(54, parseInt(e.target.value, 10) || 0));
+      e.target.value = val;
+      state.players[pi].hcp = val;
+      saveGolfer(state.players[pi].name, val);
+      save();
+    });
+    input.addEventListener('blur', (e) => {
+      const pi = +e.target.dataset.player;
+      const val = Math.max(0, Math.min(54, parseInt(e.target.value, 10) || 0));
+      e.target.value = val;
+      state.players[pi].hcp = val;
+      saveGolfer(state.players[pi].name, val);
+      save();
     });
   });
 
@@ -435,16 +489,22 @@ document.querySelectorAll('#pressLimitOptions .preset').forEach(p => {
   });
 });
 
-document.getElementById('startRound').addEventListener('click', () => switchTab('scorecard'));
+document.getElementById('startRound').addEventListener('click', () => {
+  activePlayers().forEach(p => saveGolfer(p.name, p.hcp));
+  switchTab('scorecard');
+});
 document.getElementById('exportData').addEventListener('click', exportState);
 document.getElementById('importData').addEventListener('change', (e) => {
   if (e.target.files[0]) importState(e.target.files[0]);
 });
 document.getElementById('resetRound').addEventListener('click', () => {
   if (confirm('Reset the entire round? All scores will be lost.')) {
+    archiveCurrentRound();
     const saved = state.savedGroups;
+    const archived = state.archivedRounds || [];
     state = structuredClone(defaultState);
     state.savedGroups = saved;
+    state.archivedRounds = archived;
     save(); switchTab('setup');
   }
 });
@@ -581,10 +641,25 @@ function checkAutoAdvance() {
   }
 }
 
+function getLineStatuses(game, matchIndex, throughHole) {
+  const lines = buildLines(game, matchIndex);
+  // Group by segment: Front lines, Back lines, Overall lines
+  const segments = {};
+  lines.forEach(line => {
+    if (line.final) return;
+    if (throughHole < line.start) return;
+    const lastH = Math.max(...Object.keys(line.status).filter(h => +h <= throughHole).map(Number), 0);
+    const val = lastH ? (line.status[lastH] ?? 0) : 0;
+    const seg = line.name.startsWith('Front') ? 'F' : line.name.startsWith('Back') ? 'B' : 'O';
+    if (!segments[seg]) segments[seg] = [];
+    segments[seg].push(st(val));
+  });
+  return segments;
+}
+
 function renderResultsBanner() {
   const banner = document.getElementById('resultsBanner');
   const idx = state.currentHole - 1;
-  const n = +state.gameType;
   const allFilled = activePlayers().every((_, pi) => state.scores[idx][pi] !== null);
 
   if (!allFilled) {
@@ -594,20 +669,40 @@ function renderResultsBanner() {
 
   banner.classList.remove('hidden');
   const matches = getMatchups();
+  const throughHole = state.currentHole;
   let html = '';
+
   matches.forEach((m, mi) => {
-    const ln = resultForHole(idx, 'lowNet', mi);
-    const ag = resultForHole(idx, 'aggregate', mi);
+    const teamANames = m.teamA.map(i => pname(i).split(' ')[0]).join(' + ');
+    const teamBNames = m.teamB.map(i => pname(i).split(' ')[0]).join(' + ');
+
+    const lnSegs = getLineStatuses('lowNet', mi, throughHole);
+    const agSegs = getLineStatuses('aggregate', mi, throughHole);
+
     html += `
-      <div class="banner-match">
-        <span class="banner-label">M${mi+1} Low</span>
-        <span class="banner-result ${ln > 0 ? 'win' : ln < 0 ? 'loss' : 'push'}">${ln > 0 ? 'Wheel' : ln < 0 ? 'Opp' : 'Push'}</span>
-      </div>
-      <div class="banner-match">
-        <span class="banner-label">M${mi+1} Agg</span>
-        <span class="banner-result ${ag > 0 ? 'win' : ag < 0 ? 'loss' : 'push'}">${ag > 0 ? 'Wheel' : ag < 0 ? 'Opp' : 'Push'}</span>
-      </div>`;
+      <div class="banner-match-group">
+        <div class="banner-team-label">${teamANames} vs ${teamBNames}</div>`;
+
+    const segLabels = {F:'Front', B:'Back', O:'Overall'};
+    ['lowNet','aggregate'].forEach(game => {
+      const segs = game === 'lowNet' ? lnSegs : agSegs;
+      const gameLabel = game === 'lowNet' ? 'Low' : 'Agg';
+      ['F','B','O'].forEach(seg => {
+        if (!segs[seg]) return;
+        const display = segs[seg].join(', ');
+        const lead = segs[seg][0];
+        const cls = lead.includes('UP') ? 'win' : lead.includes('DN') ? 'loss' : 'push';
+        html += `
+          <div class="banner-match">
+            <span class="banner-label">${gameLabel} ${segLabels[seg]}</span>
+            <span class="banner-result ${cls}">${display}</span>
+          </div>`;
+      });
+    });
+
+    html += `</div>`;
   });
+
   html += `<div class="banner-advance"><button class="btn-stay" id="btnStay">Stay on hole</button></div>`;
   banner.innerHTML = html;
   document.getElementById('btnStay')?.addEventListener('click', () => {
@@ -985,7 +1080,7 @@ function renderSettlement() {
 
   // Share button
   document.getElementById('shareBtn').onclick = () => {
-    const lines = [`Waialae Wheel — ${new Date().toLocaleDateString()}`];
+    const lines = [`Waialae Game — ${new Date().toLocaleDateString()}`];
     lines.push(`Wheel side: ${grand >= 0 ? '+' : ''}$${grand}`);
     matchData.forEach(md => {
       lines.push(`Match ${md.index+1} (${md.match.label}): ${md.total >= 0 ? '+' : ''}$${md.total}`);
@@ -1004,12 +1099,333 @@ function renderSettlement() {
   };
 }
 
+// ── QR Code Rendering ────────────────────────────────────────────
+
+function renderQRCode(text, container, size) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  container.innerHTML = '';
+  container.appendChild(canvas);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#faf7f2';
+    ctx.fillRect(0, 0, size, size);
+    const pad = 8;
+    ctx.drawImage(img, pad, pad, size - pad*2, size - pad*2);
+  };
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&bgcolor=faf7f2&color=1a3a2a&margin=0`;
+}
+
+// ── Round Sharing (Go Live) ──────────────────────────────────────
+
+const ROUND_API = 'https://waialae-wheel-feedback.defensebuilders.workers.dev/round';
+const SITE_URL = 'https://wheel.defensebuilders.com';
+
+if (state.liveCode === undefined) state.liveCode = null;
+if (!state.archivedRounds) state.archivedRounds = [];
+
+let syncDebounce = null;
+
+function suggestRoundCode() {
+  const wheelName = pname(+state.wheelA).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${wheelName}-${mm}${dd}`;
+}
+
+function pushRoundToServer() {
+  if (!state.liveCode) return;
+  clearTimeout(syncDebounce);
+  syncDebounce = setTimeout(async () => {
+    try {
+      await fetch(`${ROUND_API}/${state.liveCode}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+      });
+    } catch (_) {}
+  }, 3000);
+}
+
+// Patch save() to also push when live
+const _origSave = save;
+save = function() {
+  const json = JSON.stringify(state);
+  localStorage.setItem('waialaeWheelTrackerV2', json);
+  saveToIDB(json);
+  if (state.liveCode && !viewerState) pushRoundToServer();
+};
+
+function renderGoLive() {
+  const container = document.getElementById('goLiveContent');
+  if (!container) return;
+
+  if (state.liveCode) {
+    const url = `${SITE_URL}?r=${state.liveCode}`;
+    container.innerHTML = `
+      <div class="share-card">
+        <div><span class="share-live-dot"></span>Live</div>
+        <div class="share-code">${state.liveCode}</div>
+        <div class="share-qr" id="shareQR"></div>
+        <div class="share-actions">
+          <button class="share-action-btn" id="copyLinkBtn">Copy Link</button>
+          <button class="share-action-btn" id="shareLinkBtn">Share</button>
+        </div>
+        <button class="share-stop" id="stopSharingBtn">Stop sharing</button>
+      </div>`;
+
+    renderQRCode(url, document.getElementById('shareQR'), 180);
+
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copyLinkBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy Link', 1500);
+      });
+    });
+
+    document.getElementById('shareLinkBtn').addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({ title: 'Waialae Game', text: `Join my round: ${state.liveCode}`, url });
+      } else {
+        navigator.clipboard.writeText(url);
+      }
+    });
+
+    document.getElementById('stopSharingBtn').addEventListener('click', () => {
+      state.liveCode = null;
+      save(); renderGoLive();
+    });
+  } else {
+    const suggested = suggestRoundCode();
+    container.innerHTML = `
+      <div class="go-live-setup">
+        <div class="go-live-code-row">
+          <input class="go-live-code-input" type="text" id="liveCodeInput" value="${suggested}" autocapitalize="characters" autocomplete="off" autocorrect="off">
+          <button class="go-live-confirm" id="goLiveBtn">Go Live</button>
+        </div>
+      </div>`;
+
+    document.getElementById('goLiveBtn').addEventListener('click', async () => {
+      const code = document.getElementById('liveCodeInput').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      if (!code) return;
+      state.liveCode = code;
+      save();
+      try {
+        await fetch(`${ROUND_API}/${code}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state),
+        });
+      } catch (_) {}
+      renderGoLive();
+    });
+  }
+}
+
+// ── Viewer Mode ──────────────────────────────────────────────────
+
+let viewerState = null;
+let viewerCode = null;
+let viewerPollTimer = null;
+let viewerFailCount = 0;
+
+function enterViewerMode(code, data) {
+  viewerCode = code.toUpperCase();
+  viewerState = data;
+  viewerFailCount = 0;
+  document.body.classList.add('viewer-mode');
+  const banner = document.getElementById('viewerBanner');
+  banner.classList.remove('hidden', 'stale', 'offline');
+  document.getElementById('viewerBannerText').textContent = `Viewing ${viewerCode} \u00b7 Live`;
+  clearInterval(viewerPollTimer);
+  viewerPollTimer = setInterval(pollViewer, 10000);
+  switchTab('matches');
+}
+
+function exitViewerMode() {
+  viewerState = null;
+  viewerCode = null;
+  clearInterval(viewerPollTimer);
+  document.body.classList.remove('viewer-mode');
+  document.getElementById('viewerBanner').classList.add('hidden');
+  if (window.history.replaceState) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  switchTab('setup');
+}
+
+async function pollViewer() {
+  if (!viewerCode) return;
+  try {
+    const res = await fetch(`${ROUND_API}/${viewerCode}`);
+    if (res.ok) {
+      viewerState = await res.json();
+      viewerFailCount = 0;
+      const banner = document.getElementById('viewerBanner');
+      banner.classList.remove('stale', 'offline');
+      document.getElementById('viewerBannerText').textContent = `Viewing ${viewerCode} \u00b7 Live`;
+      banner.style.transition = 'none';
+      banner.style.opacity = '0.7';
+      setTimeout(() => { banner.style.transition = 'opacity 0.3s'; banner.style.opacity = '1'; }, 50);
+      const tab = document.querySelector('.nav-tab.active')?.dataset.tab;
+      if (tab === 'matches') renderMatches();
+      else if (tab === 'detail') renderDetail();
+      else if (tab === 'settlement') renderSettlement();
+      else if (tab === 'scorecard') renderScorecard();
+    } else if (res.status === 404) {
+      viewerFailCount = 99;
+      document.getElementById('viewerBanner').classList.add('offline');
+      document.getElementById('viewerBannerText').textContent = `${viewerCode} \u00b7 Round no longer available`;
+    }
+  } catch (_) {
+    viewerFailCount++;
+    if (viewerFailCount >= 3) {
+      document.getElementById('viewerBanner').classList.add('stale');
+      document.getElementById('viewerBannerText').textContent = `Viewing ${viewerCode} \u00b7 Connection lost`;
+    }
+  }
+}
+
+document.getElementById('viewerExit').addEventListener('click', exitViewerMode);
+
+document.getElementById('joinBtn').addEventListener('click', async () => {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const status = document.getElementById('joinStatus');
+  if (!code) return;
+  status.textContent = 'Loading...';
+  status.className = 'join-status';
+  try {
+    const res = await fetch(`${ROUND_API}/${code}`);
+    if (res.ok) {
+      status.textContent = '';
+      enterViewerMode(code, await res.json());
+    } else {
+      status.textContent = 'Round not found. Check the code.';
+      status.className = 'join-status error';
+    }
+  } catch (_) {
+    status.textContent = 'Connection failed. Try again.';
+    status.className = 'join-status error';
+  }
+});
+
+// Viewer-mode renderer wrappers — swap state temporarily
+const _renderMatches = renderMatches;
+const _renderDetail = renderDetail;
+const _renderSettlement = renderSettlement;
+const _renderScorecard = renderScorecard;
+
+renderMatches = function() {
+  if (viewerState) { const s = state; state = viewerState; _renderMatches(); state = s; }
+  else _renderMatches();
+};
+renderDetail = function() {
+  if (viewerState) { const s = state; state = viewerState; _renderDetail(); state = s; }
+  else _renderDetail();
+};
+renderSettlement = function() {
+  if (viewerState) { const s = state; state = viewerState; _renderSettlement(); state = s; }
+  else _renderSettlement();
+};
+renderScorecard = function() {
+  if (viewerState) {
+    const s = state; state = viewerState; _renderScorecard(); state = s;
+    document.querySelectorAll('.score-row').forEach(row => {
+      row.style.pointerEvents = 'none';
+      row.style.cursor = 'default';
+    });
+  } else _renderScorecard();
+};
+
+// ── Round Archive ────────────────────────────────────────────────
+
+function archiveCurrentRound() {
+  const hasScores = state.scores.some(hole => hole.some(s => s !== null));
+  if (!hasScores) return;
+  if (!state.archivedRounds) state.archivedRounds = [];
+
+  let grand = 0;
+  const matchSummaries = [];
+  try {
+    getMatchups().forEach((m, mi) => {
+      let matchTotal = 0;
+      ['lowNet','aggregate'].forEach(game => {
+        matchTotal += buildLines(game, mi).filter(l => l.final).reduce((s, l) => s + (l.final.amount || 0), 0);
+      });
+      grand += matchTotal;
+      matchSummaries.push({ label: m.label, total: matchTotal });
+    });
+  } catch (_) {}
+
+  state.archivedRounds.push({
+    code: state.liveCode || null,
+    date: new Date().toISOString().slice(0, 10),
+    players: structuredClone(state.players.slice(0, +state.gameType)),
+    gameType: state.gameType, wheelA: state.wheelA, wheelB: state.wheelB,
+    baseBet: state.baseBet, maxPresses: state.maxPresses,
+    scores: structuredClone(state.scores),
+    summary: { grand, matches: matchSummaries }
+  });
+}
+
+function renderPastRounds() {
+  const container = document.getElementById('pastRoundsSection');
+  const rounds = state.archivedRounds || [];
+  if (!rounds.length) { container.innerHTML = ''; return; }
+
+  let html = '<div class="past-rounds-title">Past Rounds</div>';
+  [...rounds].reverse().forEach((r, ri) => {
+    const idx = rounds.length - 1 - ri;
+    const names = r.players.map(p => p.name).join(', ');
+    const cls = r.summary.grand > 0 ? 'positive' : r.summary.grand < 0 ? 'negative' : '';
+    html += `
+      <div class="past-round-card" data-archive="${idx}">
+        <div class="past-round-header">
+          <span class="past-round-date">${r.date}${r.code ? ' \u00b7 ' + r.code : ''}</span>
+          <span class="past-round-total ${cls}">${r.summary.grand >= 0 ? '+' : ''}$${r.summary.grand}</span>
+        </div>
+        <div class="past-round-players">${names}</div>
+      </div>`;
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll('.past-round-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const round = rounds[+card.dataset.archive];
+      const archivedState = {
+        ...structuredClone(defaultState),
+        players: structuredClone(round.players),
+        gameType: round.gameType, wheelA: round.wheelA, wheelB: round.wheelB,
+        baseBet: round.baseBet, maxPresses: round.maxPresses || 0,
+        scores: structuredClone(round.scores),
+      };
+      while (archivedState.players.length < 5) {
+        archivedState.players.push({name: `Player ${archivedState.players.length + 1}`, hcp: 18});
+      }
+      viewerCode = round.code || round.date;
+      viewerState = archivedState;
+      document.body.classList.add('viewer-mode');
+      const banner = document.getElementById('viewerBanner');
+      banner.classList.remove('hidden', 'stale', 'offline');
+      document.getElementById('viewerBannerText').textContent = `Viewing ${round.date}${round.code ? ' \u00b7 ' + round.code : ''} (archived)`;
+      switchTab('matches');
+    });
+  });
+}
+
 // ── Feedback ──────────────────────────────────────────────────────
 
 const FEEDBACK_URL = 'https://waialae-wheel-feedback.defensebuilders.workers.dev/feedback';
 let feedbackType = 'feature';
 
 function openFeedback() {
+  syncViewportHeight();
+  document.body.classList.add('feedback-open');
   document.getElementById('feedbackPanel').classList.remove('feedback-hidden');
   document.getElementById('feedbackBackdrop').classList.remove('feedback-hidden');
   document.getElementById('feedbackFab').classList.add('fb-open');
@@ -1022,6 +1438,7 @@ function openFeedback() {
 }
 
 function closeFeedback() {
+  document.body.classList.remove('feedback-open');
   document.getElementById('feedbackPanel').classList.add('feedback-hidden');
   document.getElementById('feedbackBackdrop').classList.add('feedback-hidden');
   document.getElementById('feedbackFab').classList.remove('fb-open');
@@ -1074,3 +1491,13 @@ document.getElementById('feedbackSubmit').addEventListener('click', async () => 
 // ── Init ──────────────────────────────────────────────────────────
 
 switchTab(state.activeTab);
+
+// Check URL for ?r=CODE to auto-join a round
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('r');
+  if (code) {
+    document.getElementById('joinCode').value = code.toUpperCase();
+    document.getElementById('joinBtn').click();
+  }
+})();

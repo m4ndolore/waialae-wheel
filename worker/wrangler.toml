@@ -5,3 +5,7 @@ compatibility_date = "2024-12-01"
 [[kv_namespaces]]
 binding = "FEEDBACK"
 id = "4d4b8a18412f42168a683a9c2b7fb20e"
+
+[[kv_namespaces]]
+binding = "ROUNDS"
+id = "3f48c5824d484e7ab762da78791a9586"

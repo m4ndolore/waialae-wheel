@@ -1,8 +1,10 @@
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+const ROUND_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 
 export default {
   async fetch(request, env) {
@@ -11,6 +13,40 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // ── Round sharing ─────────────────────────────────────────────
+    const roundMatch = url.pathname.match(/^\/round\/([A-Za-z0-9_-]+)$/);
+
+    // PUT /round/:code — scorekeeper pushes state
+    if (request.method === 'PUT' && roundMatch) {
+      try {
+        const code = roundMatch[1].toUpperCase();
+        const body = await request.text();
+        // Validate it's parseable JSON with basic shape
+        const parsed = JSON.parse(body);
+        if (!parsed.players || !parsed.scores) {
+          return json({ error: 'Invalid round state' }, 400);
+        }
+        await env.ROUNDS.put(code, body, { expirationTtl: ROUND_TTL });
+        return json({ ok: true, code });
+      } catch (e) {
+        return json({ error: 'Invalid request' }, 400);
+      }
+    }
+
+    // GET /round/:code — viewer fetches state
+    if (request.method === 'GET' && roundMatch) {
+      const code = roundMatch[1].toUpperCase();
+      const data = await env.ROUNDS.get(code);
+      if (!data) {
+        return json({ error: 'Round not found' }, 404);
+      }
+      return new Response(data, {
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      });
+    }
+
+    // ── Feedback ──────────────────────────────────────────────────
 
     // POST /feedback — submit new feedback
     if (request.method === 'POST' && url.pathname === '/feedback') {
