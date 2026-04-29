@@ -355,6 +355,7 @@ function renderGameTypePills() {
     p.classList.toggle('active', +p.dataset.value === +state.gameType);
     p.onclick = () => {
       state.gameType = +p.dataset.value;
+      if (state.gameType === 4) { state.activeMatch = 0; }
       if (state.gameType === 5 && state.wheelB === state.wheelA) { state.wheelB = (state.wheelA + 1) % 5; }
       save(); renderSetup();
     };
