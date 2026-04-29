@@ -169,16 +169,13 @@ function net(playerIndex, hidx) {
 function getMatchups() {
   const n = +state.gameType;
   if (n === 4) {
-    const wheel = +state.wheelA;
-    const others = [0,1,2,3].filter(i => i !== wheel);
-    return others.map(partner => {
-      const opp = others.filter(i => i !== partner);
-      return {
-        label: `${pname(wheel)} + ${pname(partner)} vs ${pname(opp[0])} + ${pname(opp[1])}`,
-        teamA: [wheel, partner], teamB: opp
-      };
-    });
+    // 4-player: straight 2v2, first two vs last two
+    return [{
+      label: `${pname(0)} + ${pname(1)} vs ${pname(2)} + ${pname(3)}`,
+      teamA: [0, 1], teamB: [2, 3]
+    }];
   }
+  // 5-player: wheel format with 2 wheel players
   const wa = +state.wheelA, wb = +state.wheelB;
   const others = [0,1,2,3,4].filter(i => i !== wa && i !== wb);
   const pairs = [[others[0],others[1]], [others[0],others[2]], [others[1],others[2]]];
@@ -358,8 +355,7 @@ function renderGameTypePills() {
     p.classList.toggle('active', +p.dataset.value === +state.gameType);
     p.onclick = () => {
       state.gameType = +p.dataset.value;
-      if (state.gameType === 4) { state.wheelB = 1; }
-      else if (state.wheelB === state.wheelA) { state.wheelB = (state.wheelA + 1) % 5; }
+      if (state.gameType === 5 && state.wheelB === state.wheelA) { state.wheelB = (state.wheelA + 1) % 5; }
       save(); renderSetup();
     };
   });
@@ -378,10 +374,12 @@ function renderPlayerCards() {
   const n = +state.gameType;
   let html = '';
   for (let i = 0; i < n; i++) {
-    const isWheel = (i === +state.wheelA) || (n === 5 && i === +state.wheelB);
+    if (n === 4 && i === 0) html += `<div class="team-divider">Team A</div>`;
+    if (n === 4 && i === 2) html += `<div class="team-divider">Team B</div>`;
+    const isWheel = (n === 5) && (i === +state.wheelA || i === +state.wheelB);
     html += `
       <div class="player-card">
-        <div class="player-crown ${isWheel ? 'active' : ''}" data-player="${i}" title="Wheel player">${isWheel ? '&#9813;' : '&#9813;'}</div>
+        ${n === 5 ? `<div class="player-crown ${isWheel ? 'active' : ''}" data-player="${i}" title="Wheel player">&#9813;</div>` : ''}
         <input class="player-name" type="text" value="${state.players[i].name}" data-player="${i}" autocomplete="off" autocorrect="off">
         <div class="hcp-input-wrap ${state.hcpLocked ? 'disabled' : ''}">
           <input class="hcp-input" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="54" value="${state.players[i].hcp}" data-player="${i}" ${state.hcpLocked ? 'disabled' : ''}>
@@ -432,18 +430,14 @@ function renderPlayerCards() {
   container.querySelectorAll('.player-crown').forEach(crown => {
     crown.addEventListener('click', () => {
       const pi = +crown.dataset.player;
-      if (+state.gameType === 4) {
-        state.wheelA = pi;
+      if (pi === +state.wheelA) {
+        state.wheelA = state.wheelB;
+        state.wheelB = pi;
+      } else if (pi === +state.wheelB) {
+        // already wheel, do nothing
       } else {
-        if (pi === +state.wheelA) {
-          state.wheelA = state.wheelB;
-          state.wheelB = pi;
-        } else if (pi === +state.wheelB) {
-          // already wheel, do nothing
-        } else {
-          state.wheelA = state.wheelB;
-          state.wheelB = pi;
-        }
+        state.wheelA = state.wheelB;
+        state.wheelB = pi;
       }
       save(); renderPlayerCards();
     });
