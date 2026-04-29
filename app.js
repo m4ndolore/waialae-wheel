@@ -236,29 +236,79 @@ function buildLines(game, matchIndex) {
   const back = runSegment(game, matchIndex, 'Back', 10, 18, state.baseBet);
   const overall = runSegment(game, matchIndex, 'Overall', 1, 18, state.baseBet * 2);
 
+  // ── Press lifecycle: hole 9 and hole 18 results ──
   const h9 = resultForHole(8, game, matchIndex);
+  const h18 = resultForHole(17, game, matchIndex);
   front.forEach(line => {
     if (line.kind !== 'press') return;
     if (h9 === null) return;
-    if (h9 < 0) { line.final = {state:'wiped at 9', amount:0}; return; }
-    if (h9 > 0) { line.value *= 2; line.note = 'doubled at 9'; }
-    else { line.note = 'carried at 9'; }
+
+    if (h9 > 0) {
+      // team_down wins hole 9 → press is dead
+      line.final = {state: 'wiped at 9', amount: 0};
+      return;
+    }
+
+    if (h9 < 0) {
+      // team_down loses hole 9 → double and carry
+      line.value *= 2;
+      line.note = 'doubled at 9';
+    } else {
+      // push hole 9 → carry unchanged
+      line.note = 'carried at 9';
+    }
+
+    // Carry: extend press through back 9
     let running = line.status[9] ?? 0;
     for (let h = 10; h <= 18; h++) {
-      const r = resultForHole(h-1, game, matchIndex);
+      const r = resultForHole(h - 1, game, matchIndex);
       if (r === null) break;
-      running += r; line.status[h] = running;
+      running += r;
+      line.status[h] = running;
     }
     line.end = 18;
   });
 
-  const h18 = resultForHole(17, game, matchIndex);
-  [...front, ...back, ...overall].forEach(line => {
+  // ── Front press: back-9 gate ──
+  const backMain = back.find(l => l.kind === 'main');
+  const backResult = backMain?.status[18];
+  front.forEach(line => {
     if (line.kind !== 'press' || line.final || line.end !== 18) return;
+    if (backResult === undefined) return; // back 9 not complete yet
+
+    if (backResult >= 0) {
+      // team_down won or tied back match → escaped, press dead
+      line.final = {state: 'escaped (won back)', amount: 0};
+      return;
+    }
+
+    // team_down lost back match → press is owed
     if (h18 === null) return;
-    if (h18 < 0) { line.final = {state:'wiped at 18', amount:0}; }
-    else if (h18 === 0) { line.final = {state:'realized at 18', amount: line.value * Math.sign(line.status[18] || 1)}; }
-    else { line.value *= 2; line.final = {state:'doubled & realized at 18', amount: line.value * Math.sign(line.status[18] || 1)}; }
+
+    if (h18 < 0) {
+      // team_down loses hole 18 → double again
+      line.value *= 2;
+      line.final = {state: 'doubled at 18', amount: -line.value};
+    } else {
+      // team_down wins or ties hole 18 → settles at current value
+      const standing = line.status[18] ?? 0;
+      line.final = {state: 'settled', amount: standing > 0 ? line.value : standing < 0 ? -line.value : 0};
+    }
+  });
+
+  // ── Back/Overall press: hole 18 rule ──
+  [...back, ...overall].forEach(line => {
+    if (line.kind !== 'press' || line.final) return;
+    if (h18 === null) return;
+
+    if (h18 >= 0) {
+      // team_down wins or ties hole 18 → press is dead
+      line.final = {state: h18 > 0 ? 'wiped at 18' : 'push at 18', amount: 0};
+    } else {
+      // team_down loses hole 18 → owed, settles at current value
+      const standing = line.status[18] ?? 0;
+      line.final = {state: 'settled at 18', amount: standing > 0 ? line.value : standing < 0 ? -line.value : 0};
+    }
   });
 
   [...front, ...back, ...overall].forEach(line => {
