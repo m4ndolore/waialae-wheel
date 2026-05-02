@@ -711,6 +711,10 @@ header h1 {
   flex-shrink: 0;
 }
 .score-dot.no-dot { background: transparent; }
+.score-dot.double-dot {
+  box-shadow: 12px 0 0 0 var(--gold);
+  margin-right: 22px;
+}
 .score-gross {
   font-family: var(--font-display);
   font-weight: 900;
@@ -762,9 +766,9 @@ header h1 {
 }
 .banner-label { color: var(--walnut-light); font-weight: 600; }
 .banner-result { font-weight: 700; }
-.banner-result.win { color: var(--green-muted); }
-.banner-result.loss { color: var(--burgundy); }
-.banner-result.push { color: var(--walnut-light); }
+.banner-result .win { color: var(--green-muted); }
+.banner-result .loss { color: var(--burgundy); }
+.banner-result .push { color: var(--walnut-light); }
 .banner-advance {
   display: flex;
   justify-content: center;
