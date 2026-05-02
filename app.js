@@ -806,7 +806,7 @@ function renderAtRiskBanner() {
     });
     if (pressCount > 0) {
       banner.classList.remove('hidden');
-      banner.innerHTML = `<strong>Hole 9 approaching</strong> &mdash; ${pressCount} front press${pressCount > 1 ? 'es' : ''} at risk.<br>Win = double &amp; carry. Push = carry. Lose = wiped.`;
+      banner.innerHTML = `<strong>Hole 9 approaching</strong> &mdash; ${pressCount} front press${pressCount > 1 ? 'es' : ''} at risk.<br>Win = wiped. Push = carry. Lose = double &amp; carry.`;
       return;
     }
   }
@@ -821,7 +821,7 @@ function renderAtRiskBanner() {
     });
     if (pressCount > 0) {
       banner.classList.remove('hidden');
-      banner.innerHTML = `<strong>Hole 18 approaching</strong> &mdash; ${pressCount} press${pressCount > 1 ? 'es' : ''} at risk.<br>Win = double &amp; realize. Push = realize. Lose = wiped.`;
+      banner.innerHTML = `<strong>Hole 18 approaching</strong> &mdash; ${pressCount} press${pressCount > 1 ? 'es' : ''} at risk.<br>Back presses: Win/Push = wiped, Lose = settles. Carried front presses: contingent on back 9.`;
       return;
     }
   }
