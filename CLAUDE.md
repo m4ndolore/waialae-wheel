@@ -42,7 +42,5 @@ Three files, flat structure:
 - **Dots:** Lowest handicap gets zero; others receive strokes on holes where their handicap difference ≥ hole's difficulty index
 - **Auto-press:** Triggers when any line reaches 2 down
 - **Front press hole 9 rule:** Win = wiped (dead), Push = carry into back 9, Lose = double value and carry
-- **Front press back-9 gate:** If team_down wins or ties back match, carried front press is dead (escaped). If team_down loses back match, press is owed.
-- **Front press hole 18 (if owed):** Lose = double again, otherwise settle at current value
-- **Back press hole 18 rule:** Win or Push = wiped (dead), Lose = owed and settles
+- **Back match settles all presses:** Lose back = dead (go away), Tie back = pay at current value, Win back = double and pay. Applies uniformly to carried front presses, back presses, and overall presses.
 - **Base bets:** Front $baseBet, Back $baseBet, Overall $baseBet×2; settle flat (win/lose/push, not by margin)

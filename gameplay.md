@@ -67,27 +67,19 @@ The result of hole 9 itself determines what happens to all active front-9 presse
 - **Push hole 9** → Front presses **carry** into the back 9 at their current value.
 - **Lose hole 9** → Front presses are **doubled** in value AND carry into the back 9.
 
-### Back-9 Gate (Carried Front Presses)
+## Back Match Settles All Presses
 
-Front presses that carry into the back 9 don't settle automatically — they're gated by the back-9 match result:
+Once the back 9 is complete, the **back match result** determines the fate of all active presses — carried front presses, back presses, and overall presses alike:
 
-- If the team that was **down** on the press wins or ties the back match → the carried front press **escapes** (dead, nobody pays).
-- If the team that was **down** on the press loses the back match → the press is **owed** and settles at its current value.
+- **Lose the back match** → All presses **go away** (dead, nobody pays).
+- **Tie the back match** → All presses **pay at their current value**.
+- **Win the back match** → All presses **double** in value and pay.
 
-If the press is owed, hole 18 applies: lose hole 18 doubles the press again; otherwise it settles at its current value.
-
-## Hole 18 Rule (Back & Overall Presses)
-
-The result of hole 18 determines what happens to back-9 and overall presses:
-
-- **Win or Push hole 18** → Press is **wiped** (dead, nobody pays).
-- **Lose hole 18** → Press is **owed** and settles at its current value.
-
-For **owed front presses** (that survived the back-9 gate): losing hole 18 doubles the press again; otherwise it settles at its current value.
+This is a single, unified rule. A front press that was doubled at hole 9 and carried into the back can double again if you win the back match — meaning it pays at 4× the original value.
 
 ## Why These Rules Matter
 
-The hole 9 and hole 18 rules add enormous drama to the turn and the closing hole. Winning hole 9 wipes the front presses clean, while losing it doubles them and carries them into the back. Winning or pushing hole 18 wipes back presses, but losing it means you pay. The back-9 gate adds another layer — even carried front presses can escape if you win or tie the back match. These are the most important holes in the round from a betting perspective.
+The hole 9 and back match rules add enormous drama. Winning hole 9 wipes the front presses clean, while losing it doubles them and carries them into the back. Then the entire back match becomes high-stakes: winning the back doubles every remaining press, while losing it wipes them all out. These are the moments that make or break the round from a betting perspective.
 
 ## Scale of Action
 
