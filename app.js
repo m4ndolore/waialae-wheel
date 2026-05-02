@@ -157,7 +157,10 @@ function dotOnHole(playerIndex, hole) {
   const low = Math.min(...players.map(p => +p.hcp || 0));
   const diff = Math.max(0, (+state.players[playerIndex].hcp || 0) - low);
   const holeHcp = WAIALAE_HCP[hole - 1];
-  return diff >= holeHcp ? 1 : 0;
+  // Full laps give a dot on every hole; remainder gives extra dot on hardest holes
+  const full = Math.floor(diff / 18);
+  const rem = diff % 18;
+  return full + (rem >= holeHcp ? 1 : 0);
 }
 
 function net(playerIndex, hidx) {
@@ -598,12 +601,13 @@ function renderScoreRows() {
   for (let i = 0; i < n; i++) {
     const gross = state.scores[idx][i];
     const hasScore = gross !== null;
-    const hasDot = dotOnHole(i, h);
+    const dots = dotOnHole(i, h);
     const netVal = net(i, idx);
+    const dotCls = dots === 0 ? 'no-dot' : dots >= 2 ? 'double-dot' : '';
     html += `
       <div class="score-row ${hasScore ? 'has-score' : ''}" data-player="${i}">
         <span class="score-player">${pname(i)}</span>
-        <span class="score-dot ${hasDot ? '' : 'no-dot'}"></span>
+        <span class="score-dot ${dotCls}"></span>
         <span class="score-gross ${hasScore ? '' : 'empty'}">${hasScore ? gross : 'tap'}</span>
         <span class="score-net">${netVal !== null ? 'net ' + netVal : ''}</span>
       </div>`;
@@ -734,13 +738,14 @@ function renderResultsBanner() {
       const gameLabel = game === 'lowNet' ? 'Low' : 'Agg';
       ['F','B','O'].forEach(seg => {
         if (!segs[seg]) return;
-        const display = segs[seg].join(', ');
-        const lead = segs[seg][0];
-        const cls = lead.includes('UP') ? 'win' : lead.includes('DN') ? 'loss' : 'push';
+        const display = segs[seg].map(v => {
+          const cls = v.includes('UP') ? 'win' : v.includes('DN') ? 'loss' : 'push';
+          return `<span class="${cls}">${v}</span>`;
+        }).join(', ');
         html += `
           <div class="banner-match">
             <span class="banner-label">${gameLabel} ${segLabels[seg]}</span>
-            <span class="banner-result ${cls}">${display}</span>
+            <span class="banner-result">${display}</span>
           </div>`;
       });
     });
@@ -841,10 +846,13 @@ function renderGrandTotal() {
   });
 
   const lastScoredHole = findLastScoredHole();
+  const sideLabel = +state.gameType === 4
+    ? `${pname(0)} + ${pname(1)}`
+    : 'Wheel side';
   const cls = grand > 0 ? 'positive' : grand < 0 ? 'negative' : 'zero';
   container.innerHTML = `
     <div class="grand-amount ${cls}">${grand >= 0 ? '+' : ''}$${grand}</div>
-    <div class="grand-subtitle">Wheel side &middot; Through ${lastScoredHole} hole${lastScoredHole !== 1 ? 's' : ''}</div>`;
+    <div class="grand-subtitle">${sideLabel} &middot; Through ${lastScoredHole} hole${lastScoredHole !== 1 ? 's' : ''}</div>`;
 }
 
 function findLastScoredHole() {
@@ -1068,11 +1076,14 @@ function renderSettlement() {
   });
 
   // Grand total
+  const sideLabel = +state.gameType === 4
+    ? `${pname(0)} + ${pname(1)}`
+    : 'Wheel side';
   const gtContainer = document.getElementById('settlementGrandTotal');
   const cls = grand > 0 ? 'positive' : grand < 0 ? 'negative' : 'zero';
   gtContainer.innerHTML = `
     <div class="grand-amount ${cls}">${grand >= 0 ? '+' : ''}$${grand}</div>
-    <div class="grand-subtitle">Wheel side total</div>`;
+    <div class="grand-subtitle">${sideLabel} total</div>`;
 
   // Match breakdowns
   const container = document.getElementById('settlementMatches');
@@ -1108,7 +1119,7 @@ function renderSettlement() {
       html += `</div>`;
     });
 
-    const owedText = md.total > 0 ? `Opponents owe $${md.total}` : md.total < 0 ? `Wheel side owes $${Math.abs(md.total)}` : 'Push';
+    const owedText = md.total > 0 ? `Opponents owe $${md.total}` : md.total < 0 ? `${sideLabel} owes $${Math.abs(md.total)}` : 'Push';
     html += `
           <div class="settlement-owed ${md.total > 0 ? 'positive' : md.total < 0 ? 'negative' : ''}">${owedText}</div>
         </div>
@@ -1126,7 +1137,7 @@ function renderSettlement() {
   // Share button
   document.getElementById('shareBtn').onclick = () => {
     const lines = [`Waialae Game — ${new Date().toLocaleDateString()}`];
-    lines.push(`Wheel side: ${grand >= 0 ? '+' : ''}$${grand}`);
+    lines.push(`${sideLabel}: ${grand >= 0 ? '+' : ''}$${grand}`);
     matchData.forEach(md => {
       lines.push(`Match ${md.index+1} (${md.match.label}): ${md.total >= 0 ? '+' : ''}$${md.total}`);
     });
@@ -1175,7 +1186,8 @@ if (!state.archivedRounds) state.archivedRounds = [];
 let syncDebounce = null;
 
 function suggestRoundCode() {
-  const wheelName = pname(+state.wheelA).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
+  const nameIndex = +state.gameType === 4 ? 0 : +state.wheelA;
+  const wheelName = pname(nameIndex).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
