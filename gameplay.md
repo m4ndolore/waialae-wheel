@@ -6,14 +6,11 @@ The Wheel is a **2v2 team match play** betting format designed for a regular gro
 
 ## Setup
 
-**4 players:** Pick 1 wheel player. The wheel plays 3 separate matches, each time paired with a different partner against the remaining two. Example with Magoo as wheel:
-- Match 1: Magoo + Ali vs Gary + Sang
-- Match 2: Magoo + Gary vs Ali + Sang
-- Match 3: Magoo + Sang vs Ali + Gary
+**4 players:** Straight 2v2 — players 1+2 vs players 3+4. One match, no wheel. Example: Magoo + Ali vs Gary + Sang.
 
 **5 players:** Pick 2 wheel players. They form a permanent team and play 3 matches against the 3 possible pairings of the other 3 players.
 
-The wheel player takes on more risk and action since they're in every match.
+In the 5-player format, the wheel players take on more risk and action since they're in every match.
 
 ## Handicap Strokes ("Dots")
 
@@ -66,21 +63,31 @@ Presses can themselves go 2-down, triggering additional presses. This can cascad
 
 The result of hole 9 itself determines what happens to all active front-9 presses:
 
-- **Lose hole 9** → All front presses are **wiped** (cancelled, nobody pays).
-- **Push hole 9** → Front presses **carry** into the back 9 (they keep running through hole 18).
-- **Win hole 9** → Front presses are **doubled** in value AND carry into the back 9.
+- **Win hole 9** → All front presses are **wiped** (dead, nobody pays).
+- **Push hole 9** → Front presses **carry** into the back 9 at their current value.
+- **Lose hole 9** → Front presses are **doubled** in value AND carry into the back 9.
 
-## Hole 18 Rule (All Active Presses)
+### Back-9 Gate (Carried Front Presses)
 
-The result of hole 18 itself determines what happens to all active presses that run through 18:
+Front presses that carry into the back 9 don't settle automatically — they're gated by the back-9 match result:
 
-- **Lose hole 18** → Press is **wiped** (cancelled).
-- **Push hole 18** → Press is **realized** (settles based on current standing).
-- **Win hole 18** → Press is **doubled** in value and realized.
+- If the team that was **down** on the press wins or ties the back match → the carried front press **escapes** (dead, nobody pays).
+- If the team that was **down** on the press loses the back match → the press is **owed** and settles at its current value.
+
+If the press is owed, hole 18 applies: lose hole 18 doubles the press again; otherwise it settles at its current value.
+
+## Hole 18 Rule (Back & Overall Presses)
+
+The result of hole 18 determines what happens to back-9 and overall presses:
+
+- **Win or Push hole 18** → Press is **wiped** (dead, nobody pays).
+- **Lose hole 18** → Press is **owed** and settles at its current value.
+
+For **owed front presses** (that survived the back-9 gate): losing hole 18 doubles the press again; otherwise it settles at its current value.
 
 ## Why These Rules Matter
 
-The hole 9 and hole 18 rules add enormous drama to the turn and the closing hole. A team that's been pressing all day can have everything wiped with one bad hole — or double their winnings by finishing strong. These are the most important holes in the round from a betting perspective.
+The hole 9 and hole 18 rules add enormous drama to the turn and the closing hole. Winning hole 9 wipes the front presses clean, while losing it doubles them and carries them into the back. Winning or pushing hole 18 wipes back presses, but losing it means you pay. The back-9 gate adds another layer — even carried front presses can escape if you win or tie the back match. These are the most important holes in the round from a betting perspective.
 
 ## Scale of Action
 
