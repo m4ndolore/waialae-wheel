@@ -204,7 +204,7 @@ function resultForHole(hidx, game, matchIndex) {
 
 function st(v) { return v === 0 ? 'AS' : v > 0 ? `${v}UP` : `${Math.abs(v)}DN`; }
 
-function runSegment(game, matchIndex, name, start, end, value) {
+function runSegment(game, matchIndex, name, start, end, value, pressable) {
   const lines = [], active = [];
   let pending = [], count = 0;
   const maxPresses = state.maxPresses ?? 0; // 0 = unlimited
@@ -224,80 +224,121 @@ function runSegment(game, matchIndex, name, start, end, value) {
       const prev = h === line.start ? 0 : (line.status[h-1] ?? 0);
       line.status[h] = prev + r;
     });
-    active.forEach(line => {
-      // Only the losing side presses — trigger when 2 down (negative)
-      if (line.status[h] !== undefined && line.status[h] <= -2 && h < end) {
-        pending.push({h: h+1, from: line.name});
-      }
-    });
+    if (pressable) {
+      active.forEach(line => {
+        if (line.status[h] !== undefined && line.status[h] <= -2 && h < end) {
+          pending.push({h: h+1, from: line.name});
+        }
+      });
+    }
   }
   return lines;
 }
 
 function buildLines(game, matchIndex) {
-  const front = runSegment(game, matchIndex, 'Front', 1, 9, state.baseBet);
-  const back = runSegment(game, matchIndex, 'Back', 10, 18, state.baseBet);
-  const overall = runSegment(game, matchIndex, 'Overall', 1, 18, state.baseBet * 2);
+  const front = runSegment(game, matchIndex, 'Front', 1, 9, state.baseBet, true);
+  const back = runSegment(game, matchIndex, 'Back', 10, 18, state.baseBet, true);
+  const overall = runSegment(game, matchIndex, 'Overall', 1, 18, state.baseBet * 2, false);
 
-  // ── Front press: hole 9 rule ──
+  // ── Front press: hole 9 lifecycle ──
+  // Determine pressWinningTeam from each press's own standing.
+  // status > 0 → teamA winning press. status < 0 → teamB winning.
+  // pressWinningTeam "won the hole" iff sign(standing) === sign(holeResult).
   const h9 = resultForHole(8, game, matchIndex);
   front.forEach(line => {
     if (line.kind !== 'press') return;
     if (h9 === null) return;
 
-    if (h9 > 0) {
-      // team_down wins hole 9 → press is dead
-      line.final = {state: 'wiped at 9', amount: 0};
+    const pressStanding = line.status[9] ?? 0;
+
+    // Tied press at hole 9 → closed permanently, does not carry
+    if (pressStanding === 0) {
+      line.final = {state: 'pushed at 9', amount: 0};
       return;
     }
 
-    if (h9 < 0) {
-      // team_down loses hole 9 → double and carry
+    const pwSign = Math.sign(pressStanding);
+    const pwWonH9 = Math.sign(h9) === pwSign;
+    const pwLostH9 = Math.sign(h9) === -pwSign;
+
+    if (pwWonH9) {
+      // pressWinningTeam won hole 9 → double and carry to back-9 gate
       line.value *= 2;
       line.note = 'doubled at 9';
+    } else if (pwLostH9) {
+      // pressWinningTeam lost hole 9 → erased
+      line.final = {state: 'erased at 9', amount: 0};
+      return;
     } else {
-      // push hole 9 → carry unchanged
+      // hole 9 tied → carry at current value
       line.note = 'carried at 9';
     }
 
-    // Carry: extend press through back 9
-    let running = line.status[9] ?? 0;
-    for (let h = 10; h <= 18; h++) {
-      const r = resultForHole(h - 1, game, matchIndex);
-      if (r === null) break;
-      running += r;
-      line.status[h] = running;
-    }
-    line.end = 18;
+    // Lock press and mark for back-9 gate
+    line.carried = true;
+    line.pressWinnerSign = pwSign;
   });
 
-  // ── All presses: back match result settles everything ──
-  // Carried front presses and back/overall presses all resolve the same way:
-  //   team_down loses back match → presses are dead (go away)
-  //   team_down ties back match  → presses pay at current value
-  //   team_down wins back match  → presses double and pay
+  // ── Front press: back-9 gate ──
+  // Uses BACK_9 main line result for the same scoring category.
+  // Evaluated from pressWinningTeam's perspective.
   const backMain = back.find(l => l.kind === 'main');
-  const backResult = backMain?.status[18]; // positive = teamA (team_down) winning
-  [...front, ...back, ...overall].forEach(line => {
-    if (line.kind !== 'press' || line.final) return;
-    if (line.end !== 18) return; // front presses that didn't carry
-    if (backResult === undefined) return; // back 9 not complete yet
+  const backResult = backMain?.status[18];
+  front.forEach(line => {
+    if (line.kind !== 'press' || line.final || !line.carried) return;
+    if (backResult === undefined) return; // back 9 not complete
 
-    if (backResult < 0) {
-      // team_down lost back match → all presses go away
-      line.final = {state: 'dead (lost back)', amount: 0};
-    } else if (backResult === 0) {
-      // team_down tied back match → presses pay at current value
-      const standing = line.status[18] ?? 0;
-      line.final = {state: 'paid (tied back)', amount: standing > 0 ? line.value : standing < 0 ? -line.value : 0};
-    } else {
-      // team_down won back match → presses double and pay
+    const pwSign = line.pressWinnerSign;
+
+    if (backResult === 0) {
+      // back tied → pay at current value
+      line.final = {state: 'paid (tied back)', amount: pwSign > 0 ? line.value : -line.value};
+      return;
+    }
+
+    if (Math.sign(backResult) === pwSign) {
+      // pressWinningTeam won back → double and pay
       line.value *= 2;
-      const standing = line.status[18] ?? 0;
-      line.final = {state: 'doubled (won back)', amount: standing > 0 ? line.value : standing < 0 ? -line.value : 0};
+      line.final = {state: 'doubled (won back)', amount: pwSign > 0 ? line.value : -line.value};
+    } else {
+      // pressWinningTeam lost back → erased
+      line.final = {state: 'erased (lost back)', amount: 0};
     }
   });
 
+  // ── Back press: hole 18 lifecycle ──
+  // Separate from front press lifecycle. Uses hole 18 result only.
+  const h18 = resultForHole(17, game, matchIndex);
+  back.forEach(line => {
+    if (line.kind !== 'press' || line.final) return;
+    if (h18 === null) return;
+
+    const pressStanding = line.status[18] ?? 0;
+
+    // Tied press at hole 18 → closed permanently
+    if (pressStanding === 0) {
+      line.final = {state: 'pushed at 18', amount: 0};
+      return;
+    }
+
+    const pwSign = Math.sign(pressStanding);
+    const pwWonH18 = Math.sign(h18) === pwSign;
+    const pwLostH18 = Math.sign(h18) === -pwSign;
+
+    if (pwWonH18) {
+      // pressWinningTeam won hole 18 → double and pay
+      line.value *= 2;
+      line.final = {state: 'doubled at 18', amount: pwSign > 0 ? line.value : -line.value};
+    } else if (pwLostH18) {
+      // pressWinningTeam lost hole 18 → erased
+      line.final = {state: 'erased at 18', amount: 0};
+    } else {
+      // hole 18 tied → pay at current value
+      line.final = {state: 'paid at 18', amount: pwSign > 0 ? line.value : -line.value};
+    }
+  });
+
+  // ── Main line settlement (unchanged) ──
   [...front, ...back, ...overall].forEach(line => {
     if (line.kind !== 'main') return;
     const fs = line.status[line.end];
