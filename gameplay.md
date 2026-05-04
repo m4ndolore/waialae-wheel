@@ -55,31 +55,51 @@ Each hole is won (+1), lost (-1), or pushed/halved (0). The running score tracks
 
 ## Presses (Auto-Press at 2-Down)
 
-When any betting line reaches **2 down**, a new "press" bet automatically starts from the next hole through the end of that segment. A press is a new side bet at the base amount ($10), giving the losing side a chance to recover.
+Only **Front 9** and **Back 9** lines create presses. The Overall line does not press.
+
+When a front or back betting line reaches **2 down**, a new "press" bet automatically starts from the next hole through the end of that segment. A press is a new side bet at the base amount ($10), giving the losing side a chance to recover.
 
 Presses can themselves go 2-down, triggering additional presses. This can cascade — a bad stretch can generate several active presses.
 
-## Hole 9 Rule (Front Presses)
+### Press Perspective
 
-The result of hole 9 itself determines what happens to all active front-9 presses:
+Each press determines its own **pressWinningTeam** — the team currently winning that specific press based on the holes it covers. All lifecycle rules (hole 9, back-9 gate, hole 18) evaluate from the pressWinningTeam's perspective. If a press is tied at its checkpoint, it closes with payout 0.
 
-- **Win hole 9** → All front presses are **wiped** (dead, nobody pays).
-- **Push hole 9** → Front presses **carry** into the back 9 at their current value.
-- **Lose hole 9** → Front presses are **doubled** in value AND carry into the back 9.
+## Front Press Lifecycle
 
-## Back Match Settles All Presses
+### Step 1: Hole 9
 
-Once the back 9 is complete, the **back match result** determines the fate of all active presses — carried front presses, back presses, and overall presses alike:
+At the end of hole 9, evaluate each front press's standing over its own holes:
 
-- **Lose the back match** → All presses **go away** (dead, nobody pays).
-- **Tie the back match** → All presses **pay at their current value**.
-- **Win the back match** → All presses **double** in value and pay.
+- **Press is tied** → Closed permanently. Payout 0. Does not carry.
+- **pressWinningTeam wins hole 9** → Press value **doubles**, and the press **carries** to the back-9 gate.
+- **pressWinningTeam loses hole 9** → Press is **erased**. Payout 0.
+- **Hole 9 is tied** → Press **carries** at current value to the back-9 gate.
 
-This is a single, unified rule. A front press that was doubled at hole 9 and carried into the back can double again if you win the back match — meaning it pays at 4× the original value.
+### Step 2: Back-9 Gate
+
+After the back 9 is complete, evaluate the **Back 9 main line result** (same scoring category as the press) from the pressWinningTeam's perspective:
+
+- **pressWinningTeam wins the back** → Press value **doubles** again and pays.
+- **pressWinningTeam ties the back** → Press **pays at current value**.
+- **pressWinningTeam loses the back** → Press is **erased**. Payout 0.
+
+A front press doubled at hole 9 can double again at the back-9 gate — paying at 4× original value.
+
+## Back Press Lifecycle
+
+At the end of hole 18, evaluate each back press's standing over its own holes:
+
+- **Press is tied** → Closed permanently. Payout 0.
+- **pressWinningTeam wins hole 18** → Press value **doubles** and pays.
+- **pressWinningTeam loses hole 18** → Press is **erased**. Payout 0.
+- **Hole 18 is tied** → Press **pays at current value**.
+
+The full Back 9 match result does **not** gate back presses. Only hole 18 matters.
 
 ## Why These Rules Matter
 
-The hole 9 and back match rules add enormous drama. Winning hole 9 wipes the front presses clean, while losing it doubles them and carries them into the back. Then the entire back match becomes high-stakes: winning the back doubles every remaining press, while losing it wipes them all out. These are the moments that make or break the round from a betting perspective.
+Hole 9 and hole 18 are the pivotal moments. A team winning a front press gets rewarded if they also win hole 9 (double and carry), but risks erasure if they lose it. The back-9 gate then creates a second high-stakes checkpoint. Back presses hinge entirely on hole 18. These rules create drama at the turn and the closing hole — the most important moments in the round.
 
 ## Scale of Action
 

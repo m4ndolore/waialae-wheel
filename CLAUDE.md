@@ -40,7 +40,9 @@ Three files, flat structure:
 - **4-player:** Straight 2v2 (players 1+2 vs players 3+4), no wheel
 - **5-player:** 2 wheel players create 3 matches against the 3 combinations of the other 3 players
 - **Dots:** Lowest handicap gets zero; others receive strokes on holes where their handicap difference ≥ hole's difficulty index
-- **Auto-press:** Triggers when any line reaches 2 down
-- **Front press hole 9 rule:** Win = wiped (dead), Push = carry into back 9, Lose = double value and carry
-- **Back match settles all presses:** Lose back = dead (go away), Tie back = pay at current value, Win back = double and pay. Applies uniformly to carried front presses, back presses, and overall presses.
+- **Auto-press:** Triggers when any line reaches 2 down. Only FRONT_9 and BACK_9 lines create presses. No OVERALL presses.
+- **Press perspective:** Each press determines its `pressWinningTeam` from its own running status. All lifecycle gates evaluate from that team's perspective.
+- **Front press hole 9:** Tied press = closed (payout 0, no carry). pressWinningTeam wins hole 9 = double & carry. pressWinningTeam loses hole 9 = erased. Hole 9 tied = carry at current value.
+- **Front press back-9 gate:** Uses BACK_9 main line result for same scoring category. pressWinningTeam wins back = double & pay. Ties back = pay at value. Loses back = erased.
+- **Back press hole 18:** Tied press = closed (payout 0). pressWinningTeam wins hole 18 = double & pay. pressWinningTeam loses hole 18 = erased. Hole 18 tied = pay at value.
 - **Base bets:** Front $baseBet, Back $baseBet, Overall $baseBet×2; settle flat (win/lose/push, not by margin)
