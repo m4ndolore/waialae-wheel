@@ -836,7 +836,7 @@ function renderAtRiskBanner() {
     });
     if (pressCount > 0) {
       banner.classList.remove('hidden');
-      banner.innerHTML = `<strong>Hole 9 approaching</strong> &mdash; ${pressCount} front press${pressCount > 1 ? 'es' : ''} at risk.<br>Win = wiped. Push = carry. Lose = double &amp; carry.`;
+      banner.innerHTML = `<strong>Hole 9 approaching</strong> &mdash; ${pressCount} front press${pressCount > 1 ? 'es' : ''} at risk.<br>Press winner wins 9 = double &amp; carry. Loses = erased. Tied press = closed.`;
       return;
     }
   }
@@ -846,12 +846,12 @@ function renderAtRiskBanner() {
     matches.forEach((_, mi) => {
       ['lowNet','aggregate'].forEach(game => {
         const lines = buildLines(game, mi);
-        pressCount += lines.filter(l => l.kind === 'press' && !l.final).length;
+        pressCount += lines.filter(l => l.kind === 'press' && l.name.startsWith('Back') && !l.final).length;
       });
     });
     if (pressCount > 0) {
       banner.classList.remove('hidden');
-      banner.innerHTML = `<strong>Hole 18 approaching</strong> &mdash; ${pressCount} press${pressCount > 1 ? 'es' : ''} at risk.<br>Lose back = dead. Tie back = pay. Win back = double &amp; pay.`;
+      banner.innerHTML = `<strong>Hole 18 approaching</strong> &mdash; ${pressCount} back press${pressCount > 1 ? 'es' : ''} at risk.<br>Press winner wins 18 = double &amp; pay. Loses = erased. Tie = pay.`;
       return;
     }
   }
