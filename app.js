@@ -1030,21 +1030,57 @@ function renderDetailLines() {
       settlementHtml = `<div class="detail-settlement ${fCls}">${line.final.state}: ${amt !== 0 ? (amt > 0 ? '+' : '') + '$' + amt : 'even'}</div>`;
     }
 
-    // Expanded hole-by-hole
-    let holesHtml = '';
+    // Expanded hole-by-hole score table
+    const m = getMatchups()[+state.activeMatch];
+    const isLowNet = state.activeGame === 'lowNet';
+    let holesHtml = '<div class="detail-table">';
+    holesHtml += `<div class="detail-table-header">
+      <span class="dt-hole">#</span>
+      <span class="dt-score">${pname(m.teamA[0]).slice(0,4)}</span>
+      <span class="dt-score">${pname(m.teamA[1]).slice(0,4)}</span>
+      <span class="dt-score">${pname(m.teamB[0]).slice(0,4)}</span>
+      <span class="dt-score">${pname(m.teamB[1]).slice(0,4)}</span>
+      <span class="dt-running"></span>
+    </div>`;
     for (let h = line.start; h <= Math.min(line.end, findLastScoredHole()); h++) {
-      const r = resultForHole(h-1, state.activeGame, +state.activeMatch);
       const running = line.status[h];
       if (running === undefined) continue;
+      const r = resultForHole(h-1, state.activeGame, +state.activeMatch);
+
+      // Individual net scores
+      const a0 = net(m.teamA[0], h-1);
+      const a1 = net(m.teamA[1], h-1);
+      const b0 = net(m.teamB[0], h-1);
+      const b1 = net(m.teamB[1], h-1);
+
+      // Determine which score(s) count for the winning side
+      let aWin = '', bWin = '';
+      if (r > 0) aWin = 'dt-winner';
+      if (r < 0) bWin = 'dt-winner';
+
+      // For low net, highlight the best score on each team
+      let a0Best = '', a1Best = '', b0Best = '', b1Best = '';
+      if (isLowNet && a0 !== null && a1 !== null) {
+        if (a0 <= a1) a0Best = 'dt-best'; else a1Best = 'dt-best';
+      }
+      if (isLowNet && b0 !== null && b1 !== null) {
+        if (b0 <= b1) b0Best = 'dt-best'; else b1Best = 'dt-best';
+      }
+
       const rCls = r > 0 ? 'win' : r < 0 ? 'loss' : 'push';
       const runCls = running > 0 ? 'positive' : running < 0 ? 'negative' : '';
+
       holesHtml += `
-        <div class="detail-hole-row">
-          <span class="detail-hole-num">Hole ${h}</span>
-          <span class="detail-hole-result ${rCls}"></span>
-          <span class="detail-hole-running ${runCls}">${st(running)}</span>
+        <div class="detail-table-row ${rCls}">
+          <span class="dt-hole">${h}</span>
+          <span class="dt-score ${aWin} ${a0Best}">${a0 ?? ''}</span>
+          <span class="dt-score ${aWin} ${a1Best}">${a1 ?? ''}</span>
+          <span class="dt-score ${bWin} ${b0Best}">${b0 ?? ''}</span>
+          <span class="dt-score ${bWin} ${b1Best}">${b1 ?? ''}</span>
+          <span class="dt-running ${runCls}">${st(running)}</span>
         </div>`;
     }
+    holesHtml += '</div>';
 
     // Annotation for hole 9/18 rules
     let annotationHtml = '';

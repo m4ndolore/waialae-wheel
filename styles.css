@@ -981,6 +981,37 @@ header h1 {
 .detail-hole-result.push { background: var(--walnut-light); }
 .detail-hole-running { font-weight: 700; min-width: 40px; text-align: right; }
 
+/* Detail score table */
+.detail-table { font-size: 13px; font-family: var(--font-body); }
+.detail-table-header {
+  display: grid;
+  grid-template-columns: 26px repeat(4, 1fr) 44px;
+  gap: 2px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--walnut-light);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.detail-table-row {
+  display: grid;
+  grid-template-columns: 26px repeat(4, 1fr) 44px;
+  gap: 2px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-table-row:last-child { border-bottom: none; }
+.detail-table-row.win { background: rgba(76, 141, 95, 0.06); }
+.detail-table-row.loss { background: rgba(139, 69, 69, 0.06); }
+.dt-hole { font-weight: 700; color: var(--walnut-light); }
+.dt-score { text-align: center; }
+.dt-score.dt-winner { font-weight: 700; }
+.dt-score.dt-best { text-decoration: underline; text-underline-offset: 2px; }
+.dt-running { text-align: right; font-weight: 700; }
+.dt-running.positive { color: var(--green-muted); }
+.dt-running.negative { color: var(--burgundy); }
+
 .detail-annotation {
   padding: 8px 10px;
   margin-top: 8px;
