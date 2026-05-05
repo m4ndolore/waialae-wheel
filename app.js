@@ -226,7 +226,9 @@ function runSegment(game, matchIndex, name, start, end, value, pressable) {
     });
     if (pressable) {
       active.forEach(line => {
-        if (line.status[h] !== undefined && line.status[h] <= -2 && h < end) {
+        // Either team going 2 down triggers a press
+        // status <= -2 means teamA is 2 down; status >= 2 means teamB is 2 down
+        if (line.status[h] !== undefined && (line.status[h] <= -2 || line.status[h] >= 2) && h < end) {
           pending.push({h: h+1, from: line.name});
         }
       });
