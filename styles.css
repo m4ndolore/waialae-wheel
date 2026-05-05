@@ -1002,13 +1002,28 @@ header h1 {
   border-bottom: 1px solid var(--border);
 }
 .detail-table-row:last-child { border-bottom: none; }
-.detail-table-row.win { background: rgba(76, 141, 95, 0.06); }
-.detail-table-row.loss { background: rgba(139, 69, 69, 0.06); }
-.dt-hole { font-weight: 700; color: var(--walnut-light); }
-.dt-score { text-align: center; }
-.dt-score.dt-winner { font-weight: 700; }
-.dt-score.dt-best { text-decoration: underline; text-underline-offset: 2px; }
-.dt-running { text-align: right; font-weight: 700; }
+.dt-hole { font-weight: 700; color: var(--walnut-light); align-self: center; }
+.dt-score {
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 4px;
+  align-self: center;
+}
+.dt-score.dt-green {
+  background: rgba(76, 141, 95, 0.2);
+  color: var(--green-muted);
+  font-weight: 700;
+}
+.dt-score.dt-red {
+  background: rgba(139, 69, 69, 0.2);
+  color: var(--burgundy);
+  font-weight: 700;
+}
+.dt-score.dt-push {
+  background: rgba(140, 130, 115, 0.15);
+  font-weight: 600;
+}
+.dt-running { text-align: right; font-weight: 700; align-self: center; }
 .dt-running.positive { color: var(--green-muted); }
 .dt-running.negative { color: var(--burgundy); }
 

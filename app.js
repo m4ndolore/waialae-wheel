@@ -1053,30 +1053,35 @@ function renderDetailLines() {
       const b0 = net(m.teamB[0], h-1);
       const b1 = net(m.teamB[1], h-1);
 
-      // Determine which score(s) count for the winning side
-      let aWin = '', bWin = '';
-      if (r > 0) aWin = 'dt-winner';
-      if (r < 0) bWin = 'dt-winner';
+      // Determine which scores decided this hole and color them
+      // green = winning side's deciding score, red = losing side's deciding score
+      // For low net: the best (lowest) score on each team decides
+      // For aggregate: both scores on each team decide (sum)
+      let a0Cls = '', a1Cls = '', b0Cls = '', b1Cls = '';
+      const aCls = r > 0 ? 'dt-green' : r < 0 ? 'dt-red' : 'dt-push';
+      const bCls = r < 0 ? 'dt-green' : r > 0 ? 'dt-red' : 'dt-push';
 
-      // For low net, highlight the best score on each team
-      let a0Best = '', a1Best = '', b0Best = '', b1Best = '';
-      if (isLowNet && a0 !== null && a1 !== null) {
-        if (a0 <= a1) a0Best = 'dt-best'; else a1Best = 'dt-best';
-      }
-      if (isLowNet && b0 !== null && b1 !== null) {
-        if (b0 <= b1) b0Best = 'dt-best'; else b1Best = 'dt-best';
+      if (isLowNet && a0 !== null && a1 !== null && b0 !== null && b1 !== null) {
+        // Only the best score on each team is the deciding score
+        a0Cls = a0 <= a1 ? aCls : '';
+        a1Cls = a1 <= a0 ? aCls : '';
+        b0Cls = b0 <= b1 ? bCls : '';
+        b1Cls = b1 <= b0 ? bCls : '';
+      } else if (!isLowNet && a0 !== null && a1 !== null && b0 !== null && b1 !== null) {
+        // Aggregate: both scores count
+        a0Cls = aCls; a1Cls = aCls;
+        b0Cls = bCls; b1Cls = bCls;
       }
 
-      const rCls = r > 0 ? 'win' : r < 0 ? 'loss' : 'push';
       const runCls = running > 0 ? 'positive' : running < 0 ? 'negative' : '';
 
       holesHtml += `
-        <div class="detail-table-row ${rCls}">
+        <div class="detail-table-row">
           <span class="dt-hole">${h}</span>
-          <span class="dt-score ${aWin} ${a0Best}">${a0 ?? ''}</span>
-          <span class="dt-score ${aWin} ${a1Best}">${a1 ?? ''}</span>
-          <span class="dt-score ${bWin} ${b0Best}">${b0 ?? ''}</span>
-          <span class="dt-score ${bWin} ${b1Best}">${b1 ?? ''}</span>
+          <span class="dt-score ${a0Cls}">${a0 ?? ''}</span>
+          <span class="dt-score ${a1Cls}">${a1 ?? ''}</span>
+          <span class="dt-score ${b0Cls}">${b0 ?? ''}</span>
+          <span class="dt-score ${b1Cls}">${b1 ?? ''}</span>
           <span class="dt-running ${runCls}">${st(running)}</span>
         </div>`;
     }
