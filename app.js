@@ -698,6 +698,23 @@ document.querySelectorAll('.numpad-key').forEach(key => {
   });
 });
 
+// Enter key advances like the arrow button
+document.addEventListener('keydown', (e) => {
+  if (numpadTarget === null) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const n = +state.gameType;
+    if (numpadTarget < n - 1) {
+      openNumpad(numpadTarget + 1);
+    } else {
+      closeNumpad();
+      save();
+      renderScorecard();
+      checkAutoAdvance();
+    }
+  }
+});
+
 // Close numpad on tap outside (backdrop)
 document.getElementById('numpadBackdrop').addEventListener('click', () => closeNumpad());
 
