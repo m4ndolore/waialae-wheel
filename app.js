@@ -228,8 +228,16 @@ function runSegment(game, matchIndex, name, start, end, value, pressable) {
       active.forEach(line => {
         // Either team going 2 down triggers a press
         // status <= -2 means teamA is 2 down; status >= 2 means teamB is 2 down
-        if (line.status[h] !== undefined && (line.status[h] <= -2 || line.status[h] >= 2) && h < end) {
-          pending.push({h: h+1, from: line.name});
+        // Only trigger when a line NEWLY crosses the 2-down threshold this hole
+        // (prevents re-triggering every hole a line stays 2+ down)
+        const cur = line.status[h];
+        const prev = h === line.start ? 0 : (line.status[h-1] ?? 0);
+        if (cur !== undefined && h < end) {
+          const nowDown = cur <= -2 || cur >= 2;
+          const wasDown = prev <= -2 || prev >= 2;
+          if (nowDown && !wasDown) {
+            pending.push({h: h+1, from: line.name});
+          }
         }
       });
     }
