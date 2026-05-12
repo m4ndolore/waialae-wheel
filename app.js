@@ -208,13 +208,13 @@ function runSegment(game, matchIndex, name, start, end, value, pressable) {
   const lines = [], active = [];
   let pending = [], count = 0;
   const maxPresses = state.maxPresses ?? 0; // 0 = unlimited
-  const main = {name, kind:'main', start, end, value, status:{}, final:null};
+  const main = {name, kind:'main', start, end, value, status:{}, final:null, hasPressed:false};
   lines.push(main); active.push(main);
   for (let h = start; h <= end; h++) {
     pending.filter(x => x.h === h).forEach(() => {
       if (maxPresses > 0 && count >= maxPresses) return; // cap reached
       count++;
-      const pr = {name:`${name} Press ${count}`, kind:'press', start:h, end, value:state.baseBet, status:{}, final:null, note:''};
+      const pr = {name:`${name} Press ${count}`, kind:'press', start:h, end, value:state.baseBet, status:{}, final:null, note:'', hasPressed:false};
       lines.push(pr); active.push(pr);
     });
     const r = resultForHole(h-1, game, matchIndex);
@@ -226,18 +226,11 @@ function runSegment(game, matchIndex, name, start, end, value, pressable) {
     });
     if (pressable) {
       active.forEach(line => {
-        // Either team going 2 down triggers a press
-        // status <= -2 means teamA is 2 down; status >= 2 means teamB is 2 down
-        // Only trigger when a line NEWLY crosses the 2-down threshold this hole
-        // (prevents re-triggering every hole a line stays 2+ down)
-        const cur = line.status[h];
-        const prev = h === line.start ? 0 : (line.status[h-1] ?? 0);
-        if (cur !== undefined && h < end) {
-          const nowDown = cur <= -2 || cur >= 2;
-          const wasDown = prev <= -2 || prev >= 2;
-          if (nowDown && !wasDown) {
-            pending.push({h: h+1, from: line.name});
-          }
+        // Each line can spawn at most one child press, ever.
+        // Either team going 2 down triggers it (status <= -2 or >= 2).
+        if (!line.hasPressed && line.status[h] !== undefined && (line.status[h] <= -2 || line.status[h] >= 2) && h < end) {
+          line.hasPressed = true;
+          pending.push({h: h+1, from: line.name});
         }
       });
     }
